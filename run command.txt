@@ -2,3 +2,5 @@ open in terminal and run;
 
 
 streamlit run app.py
+
+URL to share: https://cv-data-extraction-gz4nzb2ur3fx43nkdbr6pi.streamlit.app/

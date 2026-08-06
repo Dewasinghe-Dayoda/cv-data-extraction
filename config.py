@@ -34,29 +34,41 @@ Return ONLY a valid JSON object with these exact keys:
   "email": "string or null",
   "gender": "string or null",
   "age": "string or null",
-  "total_experience_years": "string or null",
+  "total_experience_years": "string",
   "last_employer": "string or null",
   "key_skills": "comma-separated string or null",
-  "current_job_title": "string or null"
+  "current_job_title": "string"
 }}
 
 CRITICAL RULES FOR total_experience_years:
-1. If the CV explicitly states "X years of experience" or similar, use that number.
-2. If NOT explicitly stated, calculate by examining ALL work history entries:
-   - Find the EARLIEST start date across all jobs listed
-   - Calculate the span from that earliest start date to TODAY (or to the most recent end date if not currently employed)
-   - Count part-time, freelance, and internship roles too
-   - Do NOT just count the most recent job
-3. Return a number like "5" or "8" or "3", not "1+" or "3+"
-4. If only one job is listed, calculate from that job's start date to now
-5. If no dates at all are found, return null
+1. If the CV explicitly states "X years of experience", use that.
+2. Count ALL work: full-time, part-time, internships, freelance, contract
+3. Calculate from earliest work start date to today
+4. If less than 1 year, return "X months" (e.g., "4 months")
+5. If 1+ years, return like "3", "5", or "8"
+6. If candidate is a fresher (no work experience at all), return "Fresher"
+7. If candidate is currently studying with no work, return "Fresher"
+8. Education status doesn't matter — count actual work only
+9. Never return null for this field
+
+CRITICAL RULES FOR current_job_title:
+1. If the CV states a current job title, use that.
+2. If the CV shows work history, use the most recent job title.
+3. If the candidate is a fresher/student with no work experience, return "Fresher".
+4. If no job title can be determined at all, return "-".
+5. Never return null for this field.
+
+RULES FOR last_employer:
+1. If the CV states a current/most recent employer, use that.
+2. If the candidate is a fresher/student, return null.
+3. If no employer can be determined, return null.
 
 CRITICAL RULES FOR age:
 1. Today's date is 2026-08-05. Use this as reference.
 2. If the CV explicitly states age, return that number.
 3. If the CV states a birth DATE (not just year), calculate: 2026 - birth_year. If the birthday has not passed yet this year, subtract 1.
 4. If the CV states only a birth YEAR (e.g., "born 1995"), calculate: 2026 - birth_year = 31.
-5. If no birth information is found, return null.
+5. If no explicit birth date or birth year is found, return null. Do NOT guess age from graduation year, experience, or other clues.
 
 OTHER RULES:
 - For skills, list the top 10 most relevant skills from the CV
