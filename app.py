@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from config import UPLOADS_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB, GEMINI_API_KEY, GROQ_API_KEY, AI_PROVIDER
 from database import (
@@ -77,7 +77,7 @@ if page == "Upload & Extract":
             st.markdown(f"**{len(valid_files)}** CV(s) ready to process")
 
             if st.button("Extract Data from All CVs", type="primary"):
-                batch_label = f"Batch — {datetime.now().strftime('%b %d, %Y %I:%M %p')}"
+                batch_label = f"Batch — {datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime('%b %d, %Y %I:%M %p')}"
                 batch_id = create_batch(batch_label)
 
                 errors_list = []
