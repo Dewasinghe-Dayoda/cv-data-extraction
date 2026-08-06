@@ -42,14 +42,16 @@ Return ONLY a valid JSON object with these exact keys:
 
 CRITICAL RULES FOR total_experience_years:
 1. If the CV explicitly states "X years of experience", use that.
-2. Count ALL work: full-time, part-time, internships, freelance, contract
-3. Calculate from earliest work start date to today
-4. If less than 1 year, return "X months" (e.g., "4 months")
-5. If 1+ years, return like "3", "5", or "8"
-6. If candidate is a fresher (no work experience at all), return "Fresher"
-7. If candidate is currently studying with no work, return "Fresher"
-8. Education status doesn't matter — count actual work only
-9. Never return null for this field
+2. Count ALL work: full-time, part-time, internships, freelance, contract.
+3. IMPORTANT: Calculate the DURATION of each job using start and end dates, then SUM all durations.
+   - If the job says "Present" or "Current", use today (Aug 06, 2026) as the end date.
+   - If the job has an end date, use that end date (not today).
+4. If total combined duration is LESS than 12 months, return "X months" (e.g., "4 months"). Do NOT round up.
+5. If total combined duration is 12+ months, return years like "3", "5", or "8".
+6. If candidate has NO work experience at all, return "Fresher".
+7. Example: "Jan 2025 - Apr 2025" = 3 months duration. Use Apr 2025 as end, NOT today.
+8. Never return "0" if there is any work history listed.
+9. Never return null for this field.
 
 CRITICAL RULES FOR current_job_title:
 1. If the CV states a current job title, use that.
