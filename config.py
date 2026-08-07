@@ -43,15 +43,26 @@ Return ONLY a valid JSON object with these exact keys:
 CRITICAL RULES FOR total_experience_years:
 1. If the CV explicitly states "X years of experience", use that.
 2. Count ALL work: full-time, part-time, internships, freelance, contract.
-3. IMPORTANT: Calculate the DURATION of each job using start and end dates, then SUM all durations.
-   - If the job says "Present" or "Current", use today (Aug 06, 2026) as the end date.
-   - If the job has an end date, use that end date (not today).
-4. If total combined duration is LESS than 12 months, return "X months" (e.g., "4 months"). Do NOT round up.
-5. If total combined duration is 12+ months, return years like "3", "5", or "8".
-6. If candidate has NO work experience at all, return "Fresher".
-7. Example: "Jan 2025 - Apr 2025" = 3 months duration. Use Apr 2025 as end, NOT today.
-8. Never return "0" if there is any work history listed.
+3. STEP-BY-STEP METHOD: List each job with its duration, then add them up:
+   - Job 1: Start → End = X months/years
+   - Job 2: Start → End = X months/years
+   - TOTAL = Job 1 + Job 2
+4. For each job duration:
+   - If "Present" or "Current" → use Aug 2026 as end date
+   - If has end date → use that date
+   - Calculate months between start and end
+5. If total < 12 months → return "X months"
+6. If total ≥ 12 months → return years (e.g., "3")
+7. If NO work experience → return "Fresher"
+8. Never return "0" if work history exists.
 9. Never return null for this field.
+
+EXAMPLE CALCULATION:
+CV says: "Intern | Jul 2023 - Apr 2024" and "Engineer | Apr 2024 - Present"
+- Intern: Jul 2023 to Apr 2024 = 9 months
+- Engineer: Apr 2024 to Aug 2026 = 28 months
+- TOTAL: 9 + 28 = 37 months = ~3 years
+Return: "3"
 
 CRITICAL RULES FOR current_job_title:
 1. If the CV states a current job title, use that.
