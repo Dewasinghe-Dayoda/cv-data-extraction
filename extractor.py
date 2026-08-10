@@ -1,5 +1,6 @@
 import json
 import time
+import os
 import pdfplumber
 from config import (
     GEMINI_API_KEY, GEMINI_MODEL,
@@ -16,6 +17,29 @@ def extract_text_from_pdf(pdf_path: str) -> str:
             if page_text:
                 text_parts.append(page_text)
     return "\n\n".join(text_parts)
+
+
+def extract_text_from_docx(docx_path: str) -> str:
+    from docx import Document
+    doc = Document(docx_path)
+    text_parts = []
+    for para in doc.paragraphs:
+        if para.text.strip():
+            text_parts.append(para.text.strip())
+    for table in doc.tables:
+        for row in table.rows:
+            row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+            if row_text:
+                text_parts.append(row_text)
+    return "\n\n".join(text_parts)
+
+
+def extract_text_from_image(image_path: str) -> str:
+    import pytesseract
+    from PIL import Image
+    img = Image.open(image_path)
+    text = pytesseract.image_to_string(img)
+    return text
 
 
 def _extract_with_gemini(cv_text: str) -> str:
@@ -119,8 +143,19 @@ def extract_candidate_data(cv_text: str) -> dict:
 
 
 def process_cv(pdf_path: str) -> tuple[dict, str]:
-    cv_text = extract_text_from_pdf(pdf_path)
+    ext = os.path.splitext(pdf_path)[1].lower()
+
+    if ext == ".pdf":
+        cv_text = extract_text_from_pdf(pdf_path)
+    elif ext == ".docx":
+        cv_text = extract_text_from_docx(pdf_path)
+    elif ext in (".png", ".jpg", ".jpeg"):
+        cv_text = extract_text_from_image(pdf_path)
+    else:
+        raise ValueError(f"Unsupported file type: {ext}")
+
     if not cv_text.strip():
-        raise ValueError("Could not extract text from PDF. The file may be scanned/image-based.")
+        raise ValueError(f"Could not extract text from {ext} file. The file may be empty or unreadable.")
+
     extracted_data = extract_candidate_data(cv_text)
     return extracted_data, cv_text

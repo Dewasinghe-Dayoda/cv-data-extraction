@@ -22,7 +22,7 @@ AI_PROVIDER = os.getenv("AI_PROVIDER", "groq")
 GEMINI_MODEL = "gemini-2.0-flash"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
-ALLOWED_EXTENSIONS = {"pdf"}
+ALLOWED_EXTENSIONS = {"pdf", "docx", "png", "jpg", "jpeg"}
 MAX_FILE_SIZE_MB = 10
 
 EXTRACTION_PROMPT = """You are a precise CV/resume data extractor. Analyze the CV text below and extract the following fields.

@@ -59,8 +59,8 @@ if page == "Upload & Extract":
         st.stop()
 
     uploaded_files = st.file_uploader(
-        "Drag & drop PDF CVs here",
-        type=["pdf"],
+        "Drag & drop CVs here (PDF, DOCX, PNG, JPG)",
+        type=["pdf", "docx", "png", "jpg", "jpeg"],
         accept_multiple_files=True,
         help=f"Maximum {MAX_FILE_SIZE_MB}MB per file"
     )
@@ -71,7 +71,7 @@ if page == "Upload & Extract":
 
         if skipped:
             for f in skipped:
-                st.warning(f"Skipped {f.name} — not a PDF")
+                st.warning(f"Skipped {f.name} — unsupported file type")
 
         if valid_files:
             st.markdown(f"**{len(valid_files)}** CV(s) ready to process")
