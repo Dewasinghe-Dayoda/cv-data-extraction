@@ -9,7 +9,7 @@ from database import (
     get_batches, get_candidates_by_batch, get_latest_batch,
     get_candidate_by_id, update_candidate, delete_candidate, get_stats
 )
-from extractor import process_cv
+from extractor import process_cv, RateLimitError
 from excel_export import export_to_excel
 
 st.set_page_config(
@@ -39,7 +39,7 @@ col2.metric("New", stats["extracted"])
 col3.metric("Done", stats["reviewed"])
 
 st.sidebar.markdown("---")
-has_api_key = (AI_PROVIDER == "groq" and GROQ_API_KEY) or (AI_PROVIDER == "gemini" and GEMINI_API_KEY) or GROQ_API_KEY
+has_api_key = GROQ_API_KEY or GEMINI_API_KEY
 if not has_api_key:
     st.sidebar.error("No API key configured")
     st.sidebar.info("Get free Groq key: console.groq.com")
@@ -124,6 +124,18 @@ if page == "Upload & Extract":
                                 st.text_input("Experience", extracted_data.get("total_experience_years", "") or "", key=f"exp_{candidate_id}", disabled=True)
                                 st.text_area("Skills", extracted_data.get("key_skills", "") or "", key=f"skills_{candidate_id}", disabled=True, height=68)
 
+                    except RateLimitError as e:
+                        errors_list.append(f"{uploaded_file.name}: {str(e)}")
+                        if e.is_daily_limit:
+                            minutes = e.retry_after // 60 if e.retry_after > 60 else 0
+                            seconds = e.retry_after % 60 if e.retry_after > 60 else e.retry_after
+                            if minutes > 0:
+                                wait_msg = f"Try again in {minutes}m {seconds}s, or tomorrow after midnight UTC."
+                            else:
+                                wait_msg = f"Try again in {seconds} seconds."
+                            st.error(f"⏳ Daily limit reached. {wait_msg}")
+                        else:
+                            st.error(f"Rate limit: {e}. Try again shortly.")
                     except Exception as e:
                         errors_list.append(f"{uploaded_file.name}: {str(e)}")
                         st.error(f"Error processing {uploaded_file.name}")

@@ -14,10 +14,15 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 EXPORTS_DIR.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-
-AI_PROVIDER = os.getenv("AI_PROVIDER", "groq")
+try:
+    import streamlit as st
+    GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
+    GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
+    AI_PROVIDER = st.secrets.get("AI_PROVIDER", "auto")
+except Exception:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+    AI_PROVIDER = os.getenv("AI_PROVIDER", "auto")
 
 GEMINI_MODEL = "gemini-2.0-flash"
 GROQ_MODEL = "llama-3.3-70b-versatile"

@@ -1,4 +1,5 @@
 import json
+import re
 import time
 import os
 import pdfplumber
@@ -7,6 +8,14 @@ from config import (
     GROQ_API_KEY, GROQ_MODEL,
     AI_PROVIDER, EXTRACTION_PROMPT
 )
+
+
+class RateLimitError(Exception):
+    def __init__(self, provider: str, message: str, retry_after: int = 0):
+        self.provider = provider
+        self.retry_after = retry_after
+        self.is_daily_limit = "per day" in message.lower() or "tpd" in message.lower() or "rpd" in message.lower()
+        super().__init__(message)
 
 
 def extract_text_from_pdf(pdf_path: str) -> str:
@@ -42,11 +51,23 @@ def extract_text_from_image(image_path: str) -> str:
     return text
 
 
+def _parse_retry_after(error_msg: str) -> int:
+    match = re.search(r"try again in (\d+)m(\d+\.?\d*)s", error_msg)
+    if match:
+        minutes = int(match.group(1))
+        seconds = float(match.group(2))
+        return int(minutes * 60 + seconds)
+    match = re.search(r"retry-after[:\s]+(\d+)", error_msg, re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return 0
+
+
 def _extract_with_gemini(cv_text: str) -> str:
     from google import genai
     client = genai.Client(api_key=GEMINI_API_KEY)
     prompt = EXTRACTION_PROMPT.format(text=cv_text)
-    max_retries = 3
+    max_retries = 2
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
@@ -57,10 +78,8 @@ def _extract_with_gemini(cv_text: str) -> str:
         except Exception as e:
             error_msg = str(e)
             if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-                if attempt < max_retries - 1:
-                    wait_time = 10 * (attempt + 1)
-                    time.sleep(wait_time)
-                    continue
+                retry_after = _parse_retry_after(error_msg)
+                raise RateLimitError("Gemini", error_msg, retry_after)
             raise Exception(f"Gemini API error: {error_msg}")
     return ""
 
@@ -69,7 +88,7 @@ def _extract_with_groq(cv_text: str) -> str:
     from groq import Groq
     client = Groq(api_key=GROQ_API_KEY)
     prompt = EXTRACTION_PROMPT.format(text=cv_text)
-    max_retries = 3
+    max_retries = 2
     for attempt in range(max_retries):
         try:
             response = client.chat.completions.create(
@@ -85,10 +104,8 @@ def _extract_with_groq(cv_text: str) -> str:
         except Exception as e:
             error_msg = str(e)
             if "429" in error_msg or "rate_limit" in error_msg.lower():
-                if attempt < max_retries - 1:
-                    wait_time = 5 * (attempt + 1)
-                    time.sleep(wait_time)
-                    continue
+                retry_after = _parse_retry_after(error_msg)
+                raise RateLimitError("Groq", error_msg, retry_after)
             raise Exception(f"Groq API error: {error_msg}")
     return ""
 
@@ -118,25 +135,40 @@ def _parse_json_response(raw_response: str) -> dict:
 
 def extract_candidate_data(cv_text: str) -> dict:
     errors = []
+    rate_limit_errors = []
 
-    if AI_PROVIDER == "gemini" or (AI_PROVIDER == "auto" and GEMINI_API_KEY):
+    providers = []
+    if AI_PROVIDER == "groq":
+        providers = ["groq"]
+    elif AI_PROVIDER == "gemini":
+        providers = ["gemini"]
+    else:
+        if GROQ_API_KEY:
+            providers.append("groq")
+        if GEMINI_API_KEY:
+            providers.append("gemini")
+
+    for provider in providers:
         try:
-            raw_response = _extract_with_gemini(cv_text)
+            if provider == "groq":
+                raw_response = _extract_with_groq(cv_text)
+            else:
+                raw_response = _extract_with_gemini(cv_text)
             return _parse_json_response(raw_response)
+        except RateLimitError as e:
+            rate_limit_errors.append(e)
+            errors.append(f"{e.provider}: {e}")
+            continue
         except Exception as e:
-            errors.append(f"Gemini: {e}")
+            errors.append(f"{provider}: {e}")
+            continue
 
-    if AI_PROVIDER == "groq" or (AI_PROVIDER == "auto" and GROQ_API_KEY) or not errors:
-        try:
-            raw_response = _extract_with_groq(cv_text)
-            return _parse_json_response(raw_response)
-        except Exception as e:
-            errors.append(f"Groq: {e}")
-
-    if AI_PROVIDER == "gemini" and GEMINI_API_KEY and not GROQ_API_KEY:
-        raise Exception(
-            "Gemini API quota exhausted. Get a free Groq API key at https://console.groq.com\n"
-            "Add GROQ_API_KEY to your .env file and set AI_PROVIDER=groq"
+    if rate_limit_errors:
+        worst = max(rate_limit_errors, key=lambda x: x.retry_after)
+        raise RateLimitError(
+            worst.provider,
+            f"Daily limit reached for {worst.provider}. Resets at midnight UTC.",
+            worst.retry_after
         )
 
     raise Exception(f"All AI providers failed:\n" + "\n".join(errors))
