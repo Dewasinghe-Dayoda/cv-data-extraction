@@ -91,7 +91,8 @@ if page == "Upload & Extract":
 
                     tmp_path = None
                     try:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                        file_ext = os.path.splitext(uploaded_file.name)[1].lower()
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
                             tmp_file.write(uploaded_file.read())
                             tmp_path = tmp_file.name
 
