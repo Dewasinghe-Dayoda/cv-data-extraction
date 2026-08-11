@@ -3,7 +3,7 @@ import os
 import tempfile
 from datetime import datetime, timezone, timedelta
 
-from config import UPLOADS_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB, GEMINI_API_KEY, GROQ_API_KEY, AI_PROVIDER
+from config import UPLOADS_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB, GEMINI_API_KEY, GROQ_API_KEY, AI_PROVIDER, APP_PASSWORD
 from database import (
     init_db, insert_candidate, get_all_candidates, create_batch,
     get_batches, get_candidates_by_batch, get_latest_batch,
@@ -18,6 +18,24 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+APP_PASSWORD = APP_PASSWORD
+
+if APP_PASSWORD:
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    if not st.session_state.authenticated:
+        st.title("CV Data Extraction Tool")
+        st.markdown("Enter the password to access this application.")
+        password = st.text_input("Password", type="password")
+        if st.button("Login", type="primary"):
+            if password == APP_PASSWORD:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+        st.stop()
 
 init_db()
 

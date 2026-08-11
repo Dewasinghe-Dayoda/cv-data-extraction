@@ -1,0 +1,27 @@
+services:
+  cv-extraction:
+    build: .
+    container_name: cv-extraction-app
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - app-data:/app/data
+      - app-uploads:/app/uploads
+      - app-exports:/app/exports
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  app-data:
+    driver: local
+  app-uploads:
+    driver: local
+  app-exports:
+    driver: local

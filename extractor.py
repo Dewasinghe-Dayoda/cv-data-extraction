@@ -11,10 +11,13 @@ from config import (
 
 
 class RateLimitError(Exception):
-    def __init__(self, provider: str, message: str, retry_after: int = 0):
+    def __init__(self, provider: str, message: str, retry_after: int = 0, is_daily_limit: bool = None):
         self.provider = provider
         self.retry_after = retry_after
-        self.is_daily_limit = "per day" in message.lower() or "tpd" in message.lower() or "rpd" in message.lower()
+        if is_daily_limit is not None:
+            self.is_daily_limit = is_daily_limit
+        else:
+            self.is_daily_limit = "per day" in message.lower() or "tpd" in message.lower() or "rpd" in message.lower()
         super().__init__(message)
 
 
@@ -168,7 +171,8 @@ def extract_candidate_data(cv_text: str) -> dict:
         raise RateLimitError(
             worst.provider,
             f"Daily limit reached for {worst.provider}. Resets at midnight UTC.",
-            worst.retry_after
+            worst.retry_after,
+            is_daily_limit=True
         )
 
     raise Exception(f"All AI providers failed:\n" + "\n".join(errors))

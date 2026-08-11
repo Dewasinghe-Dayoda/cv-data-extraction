@@ -1,0 +1,16 @@
+.git
+.env
+.env.example
+*.db
+__pycache__
+*.pyc
+venv/
+.venv/
+uploads/
+exports/
+data/
+.streamlit/secrets.toml
+*.md
+start.bat
+find_ip.bat
+Sample CVs/

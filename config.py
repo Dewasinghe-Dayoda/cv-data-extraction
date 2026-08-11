@@ -19,10 +19,12 @@ try:
     GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "")
     GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
     AI_PROVIDER = st.secrets.get("AI_PROVIDER", "auto")
+    APP_PASSWORD = st.secrets.get("APP_PASSWORD", "")
 except Exception:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     AI_PROVIDER = os.getenv("AI_PROVIDER", "auto")
+    APP_PASSWORD = os.getenv("APP_PASSWORD", "")
 
 GEMINI_MODEL = "gemini-2.0-flash"
 GROQ_MODEL = "llama-3.3-70b-versatile"
