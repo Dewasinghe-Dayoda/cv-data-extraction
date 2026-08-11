@@ -2,6 +2,7 @@ import json
 import re
 import time
 import os
+from datetime import datetime, timezone
 import pdfplumber
 from config import (
     GEMINI_API_KEY, GEMINI_MODEL,
