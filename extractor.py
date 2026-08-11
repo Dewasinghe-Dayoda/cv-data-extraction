@@ -69,7 +69,8 @@ def _parse_retry_after(error_msg: str) -> int:
 def _extract_with_gemini(cv_text: str) -> str:
     from google import genai
     client = genai.Client(api_key=GEMINI_API_KEY)
-    prompt = EXTRACTION_PROMPT.format(text=cv_text)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    prompt = EXTRACTION_PROMPT.format(text=cv_text, today=today)
     max_retries = 2
     for attempt in range(max_retries):
         try:
@@ -90,18 +91,19 @@ def _extract_with_gemini(cv_text: str) -> str:
 def _extract_with_groq(cv_text: str) -> str:
     from groq import Groq
     client = Groq(api_key=GROQ_API_KEY)
-    prompt = EXTRACTION_PROMPT.format(text=cv_text)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    prompt = EXTRACTION_PROMPT.format(text=cv_text, today=today)
     max_retries = 2
     for attempt in range(max_retries):
         try:
             response = client.chat.completions.create(
                 model=GROQ_MODEL,
                 messages=[
-                    {"role": "system", "content": "You are a CV/resume data extraction assistant. Return only valid JSON."},
+                    {"role": "system", "content": "You are a CV/resume data extraction assistant. You MUST return ONLY a valid JSON object. No explanations, no markdown, no text before or after. Just the raw JSON."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.0,
-                max_tokens=1024
+                max_tokens=2048
             )
             return response.choices[0].message.content.strip()
         except Exception as e:

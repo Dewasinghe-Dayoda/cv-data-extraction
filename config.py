@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -99,7 +100,7 @@ RULES FOR last_employer:
 3. If no employer can be determined, return null.
 
 CRITICAL RULES FOR age:
-1. Today's date is 2026-08-05. Use this as reference.
+1. Today's date is {today}. Use this as reference.
 2. If the CV explicitly states age, return that number.
 3. If the CV states a birth DATE (not just year), calculate: 2026 - birth_year. If the birthday has not passed yet this year, subtract 1.
 4. If the CV states only a birth YEAR (e.g., "born 1995"), calculate: 2026 - birth_year = 31.
