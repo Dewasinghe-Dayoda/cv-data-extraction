@@ -56,7 +56,7 @@ def _months_between(start: tuple[int, int], end: tuple[int, int]) -> int:
 
 def calculate_experience_from_text(cv_text: str) -> str | None:
     date_range_pattern = re.compile(
-        r"(?:^|(?<=\s))(\d{4}|[a-zA-Z]{3,9} \d{4})[ \t]*"
+        r"(?:^|(?<=\s)|(?<=\())(\d{4}|[a-zA-Z]{3,9} \d{4})[ \t]*"
         r"[\-–—to]+[ \t]*"
         r"(\d{4}|[a-zA-Z]{3,9} \d{4}|present|current|till[ \t]+(?:date|now))",
         re.IGNORECASE
@@ -81,10 +81,20 @@ def calculate_experience_from_text(cv_text: str) -> str | None:
 
         match_start = match.start()
         match_end = match.end()
-        after_text = cv_text[match_end:match_end + 200]
-        before_text = cv_text[max(0, match_start - 40):match_start]
 
-        if education_degree_pattern.search(before_text) or education_degree_pattern.search(after_text):
+        line_start = cv_text.rfind("\n", 0, match_start)
+        line_start = 0 if line_start == -1 else line_start + 1
+        line_end = cv_text.find("\n", match_end)
+        if line_end == -1:
+            line_end = len(cv_text)
+        same_line = cv_text[line_start:line_end]
+
+        next_line_end = cv_text.find("\n", line_end + 1)
+        if next_line_end == -1:
+            next_line_end = len(cv_text)
+        next_line = cv_text[line_end + 1:next_line_end] if line_end + 1 < len(cv_text) else ""
+
+        if education_degree_pattern.search(same_line) or education_degree_pattern.search(next_line):
             continue
 
         periods.append((start, end))
