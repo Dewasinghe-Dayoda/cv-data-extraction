@@ -62,13 +62,32 @@ def calculate_experience_from_text(cv_text: str) -> str | None:
         re.IGNORECASE
     )
 
+    education_degree_pattern = re.compile(
+        r"\b(?:b\.?s\.?c\.?\b|b\.?a\.?\b|b\.?eng\b|b\.?tech\b|b\.?com\b|b\.?ed\b|b\.?sc\b|"
+        r"m\.?a\.?\b|m\.?s\.?c\.?\b|m\.?tech\b|\bmba\b|m\.?com\b|m\.?ed\b|m\.?eng\b|"
+        r"ph\.?d\b|d\.?phil\b|\bbachelor\b|\bmaster\b|\bdegree\b|\bdiploma\b|"
+        r"\buniversity\b|\bcollege\b|\binstitut)",
+        re.IGNORECASE
+    )
+
     periods = []
     for match in date_range_pattern.finditer(cv_text):
         start = _parse_date(match.group(1))
         end = _parse_date(match.group(2))
-        if start and end:
-            if _months_between(start, end) > 0:
-                periods.append((start, end))
+        if not start or not end:
+            continue
+        if _months_between(start, end) <= 0:
+            continue
+
+        match_start = match.start()
+        match_end = match.end()
+        after_text = cv_text[match_end:match_end + 200]
+        before_text = cv_text[max(0, match_start - 40):match_start]
+
+        if education_degree_pattern.search(before_text) or education_degree_pattern.search(after_text):
+            continue
+
+        periods.append((start, end))
 
     if not periods:
         return None
