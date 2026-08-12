@@ -10,6 +10,99 @@ from config import (
     AI_PROVIDER, EXTRACTION_PROMPT
 )
 
+MONTH_MAP = {
+    "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
+    "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6,
+    "jul": 7, "july": 7, "aug": 8, "august": 8, "sep": 9, "september": 9,
+    "oct": 10, "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12
+}
+
+PRESENT_KEYWORDS = ["present", "current", "till date", "till now", "ongoing", "now"]
+
+
+def _parse_date(date_str: str) -> tuple[int, int] | None:
+    date_str = date_str.strip().lower().rstrip(".")
+    for kw in PRESENT_KEYWORDS:
+        if kw in date_str:
+            now = datetime.now()
+            return (now.year, now.month)
+    m = re.match(r"(\d{4})", date_str)
+    if m:
+        return (int(m.group(1)), 1)
+    m = re.match(r"([a-z]+)\s+(\d{4})", date_str)
+    if m:
+        mon = MONTH_MAP.get(m.group(1))
+        if mon:
+            return (int(m.group(2)), mon)
+    m = re.match(r"(\d{1,2})[/\-](\d{4})", date_str)
+    if m:
+        return (int(m.group(2)), int(m.group(1)))
+    m = re.match(r"([a-z]+)\s+(\d{1,2})[/\-,\s]+(\d{4})", date_str)
+    if m:
+        mon = MONTH_MAP.get(m.group(1))
+        if mon:
+            return (int(m.group(3)), mon)
+    m = re.match(r"(\d{1,2})\s+([a-z]+)\s+(\d{4})", date_str)
+    if m:
+        mon = MONTH_MAP.get(m.group(2))
+        if mon:
+            return (int(m.group(3)), mon)
+    return None
+
+
+def _months_between(start: tuple[int, int], end: tuple[int, int]) -> int:
+    return (end[0] - start[0]) * 12 + (end[1] - start[1])
+
+
+def calculate_experience_from_text(cv_text: str) -> str | None:
+    date_range_pattern = re.compile(
+        r"(?:^|(?<=\s))(\d{4}|[a-zA-Z]{3,9} \d{4})[ \t]*"
+        r"[\-–—to]+[ \t]*"
+        r"(\d{4}|[a-zA-Z]{3,9} \d{4}|present|current|till[ \t]+(?:date|now))",
+        re.IGNORECASE
+    )
+
+    periods = []
+    for match in date_range_pattern.finditer(cv_text):
+        start = _parse_date(match.group(1))
+        end = _parse_date(match.group(2))
+        if start and end:
+            if _months_between(start, end) > 0:
+                periods.append((start, end))
+
+    if not periods:
+        return None
+
+    periods.sort(key=lambda x: x[0])
+
+    merged = [periods[0]]
+    for start, end in periods[1:]:
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end:
+            if end > prev_end:
+                merged[-1] = (prev_start, end)
+        else:
+            merged.append((start, end))
+
+    total_months = sum(_months_between(s, e) for s, e in merged)
+
+    if total_months <= 0:
+        return None
+
+    years = total_months // 12
+    months = total_months % 12
+
+    if years > 0 and months > 0:
+        y_label = "Year" if years == 1 else "Years"
+        m_label = "Month" if months == 1 else "Months"
+        return f"{years} {y_label} {months} {m_label}"
+    elif years > 0:
+        y_label = "Year" if years == 1 else "Years"
+        return f"{years} {y_label}"
+    else:
+        m_label = "Month" if months == 1 else "Months"
+        return f"{months} {m_label}"
+
 
 class RateLimitError(Exception):
     def __init__(self, provider: str, message: str, retry_after: int = 0, is_daily_limit: bool = None):
@@ -197,4 +290,9 @@ def process_cv(pdf_path: str) -> tuple[dict, str]:
         raise ValueError(f"Could not extract text from {ext} file. The file may be empty or unreadable.")
 
     extracted_data = extract_candidate_data(cv_text)
+
+    calculated_exp = calculate_experience_from_text(cv_text)
+    if calculated_exp:
+        extracted_data["total_experience_years"] = calculated_exp
+
     return extracted_data, cv_text
