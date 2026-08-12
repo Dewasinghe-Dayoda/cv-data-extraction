@@ -69,20 +69,46 @@ def _format_months(total_months: int) -> str:
         return f"{months} {m_label}"
 
 
-def calculate_experience_from_durations(cv_text: str) -> str | None:
-    section_headers = re.compile(
-        r"(?:^|\n)\s*(?:PROFESSIONAL\s+)?EXPERIENCE\b|"
-        r"(?:^|\n)\s*WORK\s+EXPERIENCE\b|"
-        r"(?:^|\n)\s*EMPLOYMENT\s+HISTORY\b|"
-        r"(?:^|\n)\s*CAREER\s+HISTORY\b",
-        re.IGNORECASE
-    )
+EXPERIENCE_HEADER_PATTERN = re.compile(
+    r"(?:^|\n)[ \t]*(?:PROFESSIONAL[ \t]+|WORK[ \t]+|EMPLOYMENT[ \t]+|CAREER[ \t]+)?EXPERIENCE\b"
+    r"|(?:^|\n)[ \t]*EMPLOYMENT[ \t]+HISTORY\b"
+    r"|(?:^|\n)[ \t]*CAREER[ \t]+HISTORY\b",
+    re.IGNORECASE
+)
 
-    header_match = section_headers.search(cv_text)
-    if header_match:
-        search_text = cv_text[header_match.start():]
-    else:
-        search_text = cv_text
+NEXT_SECTION_PATTERN = re.compile(
+    r"(?:^|\n)[ \t]*EDUCATION\b|"
+    r"(?:^|\n)[ \t]*PROFESSIONAL[ \t]+QUALIFICATION"
+    r"|(?:^|\n)[ \t]*SKILLS?\b|"
+    r"(?:^|\n)[ \t]*CERTIFICATIONS?\b|"
+    r"(?:^|\n)[ \t]*TRAININGS?\b|"
+    r"(?:^|\n)[ \t]*ACHIEVEMENTS?\b|"
+    r"(?:^|\n)[ \t]*AWARDS?\b|"
+    r"(?:^|\n)[ \t]*LANGUAGES?\b|"
+    r"(?:^|\n)[ \t]*REFERENCES?\b|"
+    r"(?:^|\n)[ \t]*PERSONAL[ \t]+DETAILS?\b|"
+    r"(?:^|\n)[ \t]*CONTACT\b|"
+    r"(?:^|\n)[ \t]*SUMMARY\b|"
+    r"(?:^|\n)[ \t]*PROFILE\b|"
+    r"(?:^|\n)[ \t]*ABOUT\b",
+    re.IGNORECASE
+)
+
+
+def _extract_experience_section(cv_text: str) -> str | None:
+    header_match = EXPERIENCE_HEADER_PATTERN.search(cv_text)
+    if not header_match:
+        return None
+    section_start = header_match.end()
+    next_section = NEXT_SECTION_PATTERN.search(cv_text, section_start)
+    section_end = next_section.start() if next_section else len(cv_text)
+    return cv_text[section_start:section_end]
+
+
+def calculate_experience_from_durations(cv_text: str) -> str | None:
+    search_text = _extract_experience_section(cv_text)
+    if search_text is None:
+        return None
 
     duration_pattern = re.compile(
         r"(?<!\w)(\d+)\s+years?\b"
@@ -93,20 +119,6 @@ def calculate_experience_from_durations(cv_text: str) -> str | None:
 
     total_months = 0
     for match in duration_pattern.finditer(search_text):
-        if match.group(1):
-            total_months += int(match.group(1)) * 12
-            if match.group(2):
-                total_months += int(match.group(2))
-        elif match.group(3):
-            total_months += int(match.group(3))
-
-    if total_months <= 0:
-        return None
-
-    return _format_months(total_months)
-
-    total_months = 0
-    for match in duration_pattern.finditer(cv_text):
         if match.group(1):
             total_months += int(match.group(1)) * 12
             if match.group(2):
@@ -139,6 +151,9 @@ def calculate_experience_from_text(cv_text: str) -> str | None:
         r"\buniversity\b|\bcollege\b|\binstitut)",
         re.IGNORECASE
     )
+
+    if not EXPERIENCE_HEADER_PATTERN.search(cv_text):
+        return None
 
     periods = []
     for match in date_range_pattern.finditer(cv_text):

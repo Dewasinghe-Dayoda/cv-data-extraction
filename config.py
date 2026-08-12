@@ -68,6 +68,7 @@ CRITICAL RULES FOR total_experience_years:
 8. Never return "0" if work history exists.
 9. Never return null for this field.
 10. VERIFICATION: After calculating, double-check your math. If total > 40 years, you likely made an error — recalculate.
+11. CRITICAL: Do NOT count school activities, sports teams, tournaments, championships, awards, club memberships, or academic projects as work experience. Only count actual paid jobs, roles, or internships under a PROFESSIONAL/EMPLOYMENT/CAREER experience section.
 
 EXAMPLE CALCULATIONS:
 Example 1 - Multiple jobs (no overlap):
@@ -95,6 +96,11 @@ CV says: "QA Executive | 2006 - 2012" and "Manager QA | 2012 - 2016" and "Head o
 - Plant Manager: Jan 2021 to Aug 2026 = 67 months
 - These roles are sequential (no overlap), so add all: 72 + 48 + 51 + 67 = 238 months = 19 Years 10 Months
 Return: "19 Years 10 Months"
+
+Example 5 - Fresher (school/college activities only, NO work experience):
+CV says only: "2023-2024 School cricket team captain", "2024-2025 Big match team", "Education: G.C.E. O/L 2021"
+- These are school/sports activities, NOT jobs. There is zero work history.
+Return: "Fresher"
 
 CRITICAL RULES FOR current_job_title:
 1. If the CV states a current job title, use that.
