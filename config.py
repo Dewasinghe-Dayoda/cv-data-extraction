@@ -47,28 +47,30 @@ Return ONLY a valid JSON object with these exact keys:
 }}
 
 CRITICAL RULES FOR total_experience_years:
-1. If the CV explicitly states "X years of experience", use that.
+1. If the CV explicitly states "X years of experience", use that UNLESS it clearly contradicts the job history.
 2. Count ALL work: full-time, part-time, internships, freelance, contract.
-3. STEP-BY-STEP METHOD: List each job with its duration, then add them up:
-   - Job 1: Start → End = X months
-   - Job 2: Start → End = X months
-   - TOTAL = Job 1 + Job 2
+3. STEP-BY-STEP METHOD (you MUST follow this):
+   a. LIST every job/role with its start date and end date
+   b. For EACH job, calculate months: (end_year - start_year) * 12 + (end_month - start_month)
+   c. ADD all months together for TOTAL
 4. For each job duration:
-   - If "Present" or "Current" → use Aug 2026 as end date
+   - If "Present" or "Current" → use August 2026 as end date
    - If has end date → use that date
    - Calculate months between start and end
-5. OUTPUT FORMAT (strictly follow):
+5. OVERLAP RULE: If two jobs overlap in time (e.g., promoted at same company), do NOT double-count the overlap. Count from the EARLIEST start date to the LATEST end date as one continuous period.
+6. OUTPUT FORMAT (strictly follow):
    - If total < 12 months → return "X Months" (e.g., "4 Months", "11 Months")
    - If total ≥ 12 months with no leftover months → return "X Years" (e.g., "3 Years")
    - If total ≥ 12 months with leftover → return "X Year Y Months" (e.g., "1 Year 5 Months", "2 Years 6 Months")
    - Use singular "Year" for exactly 1, plural "Years" for 2+
    - If NO work experience at all → return "Fresher"
-6. IMPORTANT: If the CV lists ANY job, internship, or work experience, do NOT return "Fresher". Only return "Fresher" if there is ZERO work history.
-7. Never return "0" if work history exists.
-8. Never return null for this field.
+7. IMPORTANT: If the CV lists ANY job, internship, or work experience, do NOT return "Fresher". Only return "Fresher" if there is ZERO work history.
+8. Never return "0" if work history exists.
+9. Never return null for this field.
+10. VERIFICATION: After calculating, double-check your math. If total > 40 years, you likely made an error — recalculate.
 
 EXAMPLE CALCULATIONS:
-Example 1 - Multiple jobs:
+Example 1 - Multiple jobs (no overlap):
 CV says: "Intern | Jul 2023 - Apr 2024" and "Engineer | Apr 2024 - Present"
 - Intern: Jul 2023 to Apr 2024 = 9 months
 - Engineer: Apr 2024 to Aug 2026 = 28 months
@@ -84,6 +86,15 @@ Example 3 - Exact years:
 CV says: "Engineer | Mar 2023 - Mar 2026"
 - TOTAL: 36 months = 3 Years
 Return: "3 Years"
+
+Example 4 - Long career with overlapping roles (promotion at same company):
+CV says: "QA Executive | 2006 - 2012" and "Manager QA | 2012 - 2016" and "Head of Quality | Dec 2016 - Mar 2021" and "Plant Manager | Jan 2021 - Present"
+- QA Executive: 2006 to 2012 = 72 months
+- Manager QA: 2012 to 2016 = 48 months
+- Head of Quality: Dec 2016 to Mar 2021 = 51 months
+- Plant Manager: Jan 2021 to Aug 2026 = 67 months
+- These roles are sequential (no overlap), so add all: 72 + 48 + 51 + 67 = 238 months = 19 Years 10 Months
+Return: "19 Years 10 Months"
 
 CRITICAL RULES FOR current_job_title:
 1. If the CV states a current job title, use that.
