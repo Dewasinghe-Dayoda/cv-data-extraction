@@ -54,7 +54,77 @@ def _months_between(start: tuple[int, int], end: tuple[int, int]) -> int:
     return (end[0] - start[0]) * 12 + (end[1] - start[1])
 
 
+def _format_months(total_months: int) -> str:
+    years = total_months // 12
+    months = total_months % 12
+    if years > 0 and months > 0:
+        y_label = "Year" if years == 1 else "Years"
+        m_label = "Month" if months == 1 else "Months"
+        return f"{years} {y_label} {months} {m_label}"
+    elif years > 0:
+        y_label = "Year" if years == 1 else "Years"
+        return f"{years} {y_label}"
+    else:
+        m_label = "Month" if months == 1 else "Months"
+        return f"{months} {m_label}"
+
+
+def calculate_experience_from_durations(cv_text: str) -> str | None:
+    section_headers = re.compile(
+        r"(?:^|\n)\s*(?:PROFESSIONAL\s+)?EXPERIENCE\b|"
+        r"(?:^|\n)\s*WORK\s+EXPERIENCE\b|"
+        r"(?:^|\n)\s*EMPLOYMENT\s+HISTORY\b|"
+        r"(?:^|\n)\s*CAREER\s+HISTORY\b",
+        re.IGNORECASE
+    )
+
+    header_match = section_headers.search(cv_text)
+    if header_match:
+        search_text = cv_text[header_match.start():]
+    else:
+        search_text = cv_text
+
+    duration_pattern = re.compile(
+        r"(?<!\w)(\d+)\s+years?\b"
+        r"(?:\s+(\d+)\s+months?\b)?"
+        r"|(?<!\w)(\d+)\s+months?\b",
+        re.IGNORECASE
+    )
+
+    total_months = 0
+    for match in duration_pattern.finditer(search_text):
+        if match.group(1):
+            total_months += int(match.group(1)) * 12
+            if match.group(2):
+                total_months += int(match.group(2))
+        elif match.group(3):
+            total_months += int(match.group(3))
+
+    if total_months <= 0:
+        return None
+
+    return _format_months(total_months)
+
+    total_months = 0
+    for match in duration_pattern.finditer(cv_text):
+        if match.group(1):
+            total_months += int(match.group(1)) * 12
+            if match.group(2):
+                total_months += int(match.group(2))
+        elif match.group(3):
+            total_months += int(match.group(3))
+
+    if total_months <= 0:
+        return None
+
+    return _format_months(total_months)
+
+
 def calculate_experience_from_text(cv_text: str) -> str | None:
+    duration_result = calculate_experience_from_durations(cv_text)
+    if duration_result:
+        return duration_result
+
     date_range_pattern = re.compile(
         r"(?:^|(?<=\s)|(?<=\())(\d{4}|[a-zA-Z]{3,9} \d{4})[ \t]*"
         r"[\-–—to]+[ \t]*"
@@ -100,7 +170,7 @@ def calculate_experience_from_text(cv_text: str) -> str | None:
         periods.append((start, end))
 
     if not periods:
-        return None
+        return calculate_experience_from_durations(cv_text)
 
     periods.sort(key=lambda x: x[0])
 
@@ -118,19 +188,7 @@ def calculate_experience_from_text(cv_text: str) -> str | None:
     if total_months <= 0:
         return None
 
-    years = total_months // 12
-    months = total_months % 12
-
-    if years > 0 and months > 0:
-        y_label = "Year" if years == 1 else "Years"
-        m_label = "Month" if months == 1 else "Months"
-        return f"{years} {y_label} {months} {m_label}"
-    elif years > 0:
-        y_label = "Year" if years == 1 else "Years"
-        return f"{years} {y_label}"
-    else:
-        m_label = "Month" if months == 1 else "Months"
-        return f"{months} {m_label}"
+    return _format_months(total_months)
 
 
 class RateLimitError(Exception):
